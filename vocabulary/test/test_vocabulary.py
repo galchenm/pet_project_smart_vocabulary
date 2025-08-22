@@ -1,6 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from .vocabulary import app 
+from ..vocabulary import app 
 
 client = TestClient(app)
 
