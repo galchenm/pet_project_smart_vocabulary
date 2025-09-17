@@ -1,4 +1,5 @@
 import pytest
+import fastapi 
 from fastapi.testclient import TestClient
 from ..vocabulary import app 
 
