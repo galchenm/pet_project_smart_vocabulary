@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "langid",
     "beautifulsoup4>=4.13.5",
     "deep-translator>=1.11.4",
     "ebooklib>=0.19",
@@ -28,6 +29,10 @@ dependencies = [
     "tqdm>=4.67.1",
     "transformers>=4.56.1",
     "uvicorn>=0.35.0",
+    "torch>=2.8.0",
+    "torchvision>=0.23.0",
+    "torchaudio>=2.8.0",
+    "accelerate>=1.10.1",
 ]
 
 [dependency-groups]

@@ -26,7 +26,12 @@ summarizer_model = BartForConditionalGeneration.from_pretrained(SUMMARIZER_NAME)
 # Multilingual model for translation/paraphrasing
 MT_MODEL_NAME = "facebook/mbart-large-50-many-to-many-mmt"
 mt_tokenizer = MBart50TokenizerFast.from_pretrained(MT_MODEL_NAME)
-mt_model = MBartForConditionalGeneration.from_pretrained(MT_MODEL_NAME).to(device)
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
+mt_model = MBartForConditionalGeneration.from_pretrained(MT_MODEL_NAME, device_map=None)
+mt_model.to(device)
+
+
 
 def chunk_text(text: str, max_tokens: int = 500, tokenizer=None):
     """Chunk text into smaller parts for processing."""

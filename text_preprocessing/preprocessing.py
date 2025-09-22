@@ -26,10 +26,6 @@ def clean_text(text):
 
 
 def remove_stopwords(text: str):
-    """
-    Detect the language of the text and remove stopwords accordingly.
-    Falls back to no stopword removal if language not supported.
-    """
     # Detect language
     lang = detect(text)  
     print(f"Detected language: {lang}")
@@ -44,4 +40,6 @@ def remove_stopwords(text: str):
     tokens = word_tokenize(text.lower())
     filtered_tokens = [w for w in tokens if w.isalpha() and w not in stop_words]
 
-    return filtered_tokens
+    # Join back into a string for spaCy
+    return " ".join(filtered_tokens)
+

@@ -8,22 +8,57 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Check that analysis results exist
 if 'analysis' not in st.session_state or st.session_state.analysis is None:
     st.warning("No analysis results available. Please run text analysis first.")
     st.stop()
 
+# Initialize vocabulary table in session_state
+if 'vocab_table' not in st.session_state:
+    rows = []
+    analysis = st.session_state.analysis
+    for word, matches in analysis.get("sentences", {}).items():
+        if not matches:
+            rows.append({"Word": word, "Context": "", "Translation": ""})
+        else:
+            for match in matches:
+                rows.append({
+                    "Word": word,
+                    "Context": match.get("sentence", ""),
+                    "Translation": match.get("translation", "")
+                })
+    st.session_state.vocab_table = pd.DataFrame(rows)
+
+
+def remove_word(word):
+    st.session_state.vocab_table = st.session_state.vocab_table[st.session_state.vocab_table["Word"] != word]
+
+def remove_context(idx):
+    st.session_state.vocab_table = st.session_state.vocab_table.drop(idx).reset_index(drop=True)
+
 if __name__ == "__main__":
     st.title("Build Vocabulary")
 
-    result = st.session_state.analysis
-    vocab = result["vocabulary"]
+    st.subheader("Manage Vocabulary")
 
-    st.subheader("Vocabulary List")
-    df = pd.DataFrame(vocab, columns=["Word"])
-    st.dataframe(df)
+    df = st.session_state.vocab_table.copy()
 
-    # Download as CSV
-    csv = df.to_csv(index=False).encode("utf-8")
+    for idx, row in df.iterrows():
+        st.markdown(f"**{row['Word']}**")
+        st.write(f"- Context: {row['Context']}")
+        if row['Translation']:
+            st.caption(f"→ Translation: {row['Translation']}")
+        col1, col2 = st.columns(2)
+        if col1.button("Remove Word", key=f"word_{idx}"):
+            remove_word(row['Word'])
+        if col2.button("Remove This Example", key=f"context_{idx}"):
+            remove_context(idx)
+
+    st.subheader("Current Vocabulary Table")
+    st.dataframe(st.session_state.vocab_table)
+
+    # Download CSV
+    csv = st.session_state.vocab_table.to_csv(index=False).encode("utf-8")
     st.download_button(
         "Download Vocabulary CSV",
         data=csv,
