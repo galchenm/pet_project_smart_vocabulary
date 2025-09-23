@@ -3,6 +3,7 @@ from typing import List, Optional, Dict
 import langid
 import torch
 from transformers import MBartForConditionalGeneration, MBart50TokenizerFast
+from translation_summary.translation import translate_text
 
 # Load model and tokenizer once (put this outside the function for efficiency)
 model_name = "facebook/mbart-large-50-many-to-many-mmt"
@@ -17,21 +18,27 @@ LANGUAGE_CODES = {
 }
 
 def extract_keyword_sentences(
-    text: str,
-    keywords: List[str],
-    translate_to: Optional[str] = None
-) -> Dict[str, List[Dict]]:
-    results = {}
+        text: str,
+        keywords: List[str],
+        translate_to: Optional[str] = None
+    ) -> Dict[str, Dict]:
+    results: Dict[str, Dict] = {}
     detected_lang, _ = langid.classify(text)
     src_lang_code = LANGUAGE_CODES.get(detected_lang, "en_XX")
     tgt_lang_code = LANGUAGE_CODES.get(translate_to.lower(), "en_XX") if translate_to else None
 
-    # Split text into sentences (simple regex, no nltk)
+    # Split text into sentences (simple regex)
     sentences = re.split(r'(?<=[.!?])\s+', text.strip())
 
     for keyword in keywords:
         keyword_lower = keyword.lower()
         matches = []
+
+        # Translate the keyword itself (not the whole text)
+        keyword_translation = (
+            translate_text(keyword, src_lang_code, tgt_lang_code)
+            if translate_to else None
+        )
 
         for sent in sentences:
             if keyword_lower in sent.lower():
@@ -58,6 +65,9 @@ def extract_keyword_sentences(
                 matches.append(match)
 
         if matches:
-            results[keyword] = matches
+            results[keyword] = {
+                "translation": keyword_translation,
+                "context": matches
+            }
 
     return results

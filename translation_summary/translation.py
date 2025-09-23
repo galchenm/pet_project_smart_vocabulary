@@ -23,7 +23,7 @@ def to_mbart_code(lang_code: str) -> str:
     return LANGUAGE_CODES.get(lang_code.lower(), "en_XX")
 
 
-def translate_text(text, inp_src_lang, inp_tgt_lang, max_length=1024):
+def translate_text(text, inp_src_lang, inp_tgt_lang, max_length=10240):
     """Translate text from src_lang to tgt_lang using mBART50."""
     
     src_lang = to_mbart_code(inp_src_lang)

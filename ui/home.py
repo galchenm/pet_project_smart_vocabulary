@@ -15,15 +15,19 @@ LANGUAGE_CODES = {
     "it": "it_IT", "pt": "pt_XX", "hi": "hi_IN", "ja": "ja_XX", "ko": "ko_KR"
 }
 
-# Initialize permanent keys
+# --- Initialize permanent keys ---
 if 'text' not in st.session_state:
     st.session_state.text = ""
 if 'to_lang' not in st.session_state:
     st.session_state.to_lang = "en"  # default target language
+if 'summarize' not in st.session_state:
+    st.session_state.summarize = False
 
-# Initialize temporary key for text_area
+# --- Initialize temporary keys ---
 if '_text_area' not in st.session_state:
     st.session_state['_text_area'] = st.session_state.text
+if '_summarize' not in st.session_state:
+    st.session_state['_summarize'] = st.session_state.summarize
 
 
 def keep(key):
@@ -45,8 +49,17 @@ if __name__ == "__main__":
         "Enter text to analyze:",
         value=st.session_state['_text_area'],
         on_change=keep,
-        args=("text_area",),
+        args=("text",),  # <- map to permanent "text"
         key="_text_area"
+    )
+
+    # Checkbox for summary (keep/unkeep pattern)
+    st.checkbox(
+        "Run a summary on the provided text",
+        value=st.session_state['_summarize'],
+        on_change=keep,
+        args=("summarize",),  # <- map to permanent "summarize"
+        key="_summarize"
     )
 
     # Text input for target translation language (permanent key)
@@ -58,8 +71,14 @@ if __name__ == "__main__":
 
     # Submit button
     if st.button("Submit"):
-        # Apply keep/unkeep only for text_area
+        # Apply keep/unkeep to sync text + summarize
         st.session_state.text = st.session_state['_text_area']
-        unkeep("text_area")
+        unkeep("text")
+        st.session_state.summarize = st.session_state['_summarize']
+        unkeep("summarize")
 
-        st.success(f"Text submitted successfully! Translation target: {st.session_state.to_lang}")
+        st.success(
+            f"Text submitted successfully! "
+            f"Translation target: {st.session_state.to_lang} | "
+            f"Summarize: {st.session_state.summarize}"
+        )

@@ -18,14 +18,21 @@ if 'vocab_table' not in st.session_state:
     rows = []
     analysis = st.session_state.analysis
     for word, matches in analysis.get("sentences", {}).items():
+        word_translation = analysis.get("translation", {}).get(word, "")
         if not matches:
-            rows.append({"Word": word, "Context": "", "Translation": ""})
+            rows.append({
+                "Word": word,
+                "Word Translation": word_translation,
+                "Context": "",
+                "Context Translation": ""
+            })
         else:
             for match in matches:
                 rows.append({
                     "Word": word,
+                    "Word Translation": word_translation,
                     "Context": match.get("sentence", ""),
-                    "Translation": match.get("translation", "")
+                    "Context Translation": match.get("translation", "")
                 })
     st.session_state.vocab_table = pd.DataFrame(rows)
 
@@ -45,9 +52,11 @@ if __name__ == "__main__":
 
     for idx, row in df.iterrows():
         st.markdown(f"**{row['Word']}**")
+        if row['Word Translation']:
+            st.caption(f"→ Word Translation: {row['Word Translation']}")
         st.write(f"- Context: {row['Context']}")
-        if row['Translation']:
-            st.caption(f"→ Translation: {row['Translation']}")
+        if row['Context Translation']:
+            st.caption(f"→ Context Translation: {row['Context Translation']}")
         col1, col2 = st.columns(2)
         if col1.button("Remove Word", key=f"word_{idx}"):
             remove_word(row['Word'])

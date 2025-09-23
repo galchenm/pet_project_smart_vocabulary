@@ -1,70 +1,101 @@
 # app/api.py
-from fastapi import FastAPI, APIRouter, HTTPException, Query
+from fastapi import FastAPI, APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from words_context.context import extract_keyword_sentences
 from text_processing.processing import extract_frequent_words
-from translation_summary.mbart import summarize_and_translate  # your summarization function
+from translation_summary.mbart import summarize_and_translate  # summarization function
 
-router = APIRouter()
 
-# Request model
-class TextRequest(BaseModel):
+# ----------------------------
+# Models
+# ----------------------------
+class FrequentWordsRequest(BaseModel):
     text: str
-    summarize: Optional[bool] = False
-    summary_translate_to: Optional[str] = "en"  # target language for summary
+    lang: Optional[str] = "de"
+    top_pct: Optional[float] = 10
+    to_lang: Optional[str] = "en"  # target language for keyword translations
 
-# Response model
-class TextResponse(BaseModel):
-    analysis: List[dict]
+
+class FrequentWordsResponse(BaseModel):
+    analysis: List[Dict[str, Any]]   # [{"word": "...", "frequency": 5}, ...]
     vocabulary: List[str]
-    sentences: Optional[Dict[str, List[Dict]]] = None
-    summary: Optional[str] = None
+    sentences: Optional[Dict[str, Dict[str, Any]]] = None
+    # {
+    #   "Haus": {
+    #       "translation": "house",
+    #       "context": [
+    #           {"sentence": "Das Haus ist groß.", "translation": "The house is big."},
+    #           {"sentence": "Ich gehe ins Haus."}
+    #       ]
+    #   }
+    # }
+
+
+class SummarizationRequest(BaseModel):
+    text: str
+    summary_translate_to: Optional[str] = "en"
+
+
+class SummarizationResponse(BaseModel):
+    summary: str
     summary_translated_to: Optional[str] = None
 
 
-@router.post("/analyze", response_model=TextResponse)
-async def analyze_text(
-    request: TextRequest,
-    lang: Optional[str] = "de",
-    top_pct: Optional[float] = 10,
-    to_lang: Optional[str] = "en"  # translation for keywords
-):
+# ----------------------------
+# Routers
+# ----------------------------
+router = APIRouter()
+
+
+@router.post("/frequent-words", response_model=FrequentWordsResponse)
+async def get_frequent_words(request: FrequentWordsRequest):
     try:
         # Extract frequent words
-        analysis = extract_frequent_words(request.text, lang=lang, top_pct=top_pct)
+        analysis = extract_frequent_words(
+            request.text,
+            lang=request.lang,
+            top_pct=request.top_pct
+        )
         vocabulary = [word for word, freq in analysis]
 
-        # Extract keyword sentences with translations
-        output = extract_keyword_sentences(request.text, vocabulary, translate_to=to_lang)
-        output_clean = {k: v for k, v in (output or {}).items()}
-
-        # Optional summarization
-        summary_result = None
-        summary_lang = None
-        if request.summarize:
-            summary_data = summarize_and_translate(
-                text=request.text,
-                translate_to=request.summary_translate_to,
-                keywords=vocabulary
-            )
-            summary_result = summary_data["final_summary"]
-            summary_lang = summary_data["translated_to"]
-
-        return TextResponse(
-            analysis=[{"word": word, "frequency": freq} for word, freq in analysis],
-            vocabulary=vocabulary,
-            sentences=output_clean,
-            summary=summary_result,
-            summary_translated_to=summary_lang
+        # Extract keyword sentences (includes keyword translations now)
+        output = extract_keyword_sentences(
+            text=request.text,
+            keywords=vocabulary,
+            translate_to=request.to_lang
         )
 
+        return FrequentWordsResponse(
+            analysis=[{"word": word, "frequency": freq} for word, freq in analysis],
+            vocabulary=vocabulary,
+            sentences=output
+        )
     except Exception as e:
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Create FastAPI app
+@router.post("/summarize", response_model=SummarizationResponse)
+async def summarize_text(request: SummarizationRequest):
+    try:
+        summary_data = summarize_and_translate(
+            text=request.text,
+            translate_to=request.summary_translate_to
+        )
+        return SummarizationResponse(
+            summary=summary_data["final_summary"],
+            summary_translated_to=summary_data["translated_to"]
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ----------------------------
+# FastAPI app
+# ----------------------------
 app = FastAPI(title="Text Analysis & Summarization API")
 app.include_router(router)
